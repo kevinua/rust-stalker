@@ -1,6 +1,8 @@
 import signal, sys, os, requests, json
 from utils.banners import *
 
+USERNAMES_PATH = os.path.join(os.path.dirname(__file__), "../data/usernames.json")
+
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
@@ -10,26 +12,25 @@ def signal_handler(sig, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
-def get_name(steam_id: int):
-
-    try:    
-        usernames_path = os.path.join(os.path.dirname(__file__), "../data/usernames.json")
-
-        if not os.path.exists(usernames_path):
+def load_usernames():
+    try:
+        if not os.path.exists(USERNAMES_PATH):
             return None
 
-        with open(usernames_path, "r") as usernames_f:
-            names = json.loads(usernames_f.read())["list_usernames"]
+        with open(os.path.join(USERNAMES_PATH), "r") as usernames_f:
+            return json.load(usernames_f).get("list_usernames", [])
 
-        index = steam_id % 2147483647
-        index = index % len(names)
+    except (json.JSONDecodeError, FileNotFoundError, KeyError):
+        return None
 
-        return names[index]
-    
-    except json.JSONDecodeError:
+usernames = load_usernames()
+
+def get_name(steam_id: int):
+    if not usernames:
         return None
-    except Exception:
-        return None
+
+    index = steam_id % 2147483647 % len(usernames)
+    return usernames[index]
 
 def request_steam(id64: str):
     clear_screen()
